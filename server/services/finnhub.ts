@@ -34,34 +34,60 @@ export interface CompanyProfile {
     weburl: string;
 }
 
+/**
+ * Helper to handle Finnhub API requests with consistent error handling
+ */
+async function finnhubFetch(endpoint: string, options: RequestInit = {}) {
+    const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${FINNHUB_API_KEY}`;
+
+    try {
+        const res = await fetch(url, options);
+
+        if (res.status === 429) {
+            console.warn(`Finnhub Rate Limit exceeded for endpoint: ${endpoint}`);
+            throw new Error('Finnhub API: Rate limit exceeded (429). Please try again in a minute.');
+        }
+
+        if (!res.ok) {
+            const errorBody = await res.text().catch(() => 'Unknown error');
+            console.error(`Finnhub API Error (${res.status}) for ${endpoint}:`, errorBody);
+            throw new Error(`Finnhub API: ${res.statusText} (${res.status})`);
+        }
+
+        return await res.json();
+    } catch (error: any) {
+        console.error(`Finnhub Fetch Exception for ${endpoint}:`, error.message);
+        throw error;
+    }
+}
+
 export async function searchSymbols(query: string): Promise<StockSymbol[]> {
     if (!query) return [];
-    const res = await fetch(`${BASE_URL}/search?q=${query}&token=${FINNHUB_API_KEY}`);
-    if (!res.ok) throw new Error('Failed to fetch symbols');
-    const data = await res.json();
+    const data = await finnhubFetch(`/search?q=${query}`);
     return data.result || [];
 }
 
 export async function getQuote(symbol: string): Promise<QuoteData> {
-    const res = await fetch(`${BASE_URL}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`, {
-        next: { revalidate: 30 } // Cache for 30 seconds
+    return finnhubFetch(`/quote?symbol=${symbol}`, {
+        next: { revalidate: 30 }
     });
-    if (!res.ok) throw new Error('Failed to fetch quote');
-    return res.json();
 }
 
-export async function getCompanyProfile(symbol: string): Promise<CompanyProfile> {
-    const res = await fetch(`${BASE_URL}/stock/profile2?symbol=${symbol}&token=${FINNHUB_API_KEY}`, {
-        next: { revalidate: 86400 } // Cache for 24 hours
+export async function getCompanyProfile(symbol: string): Promise<CompanyProfile | null> {
+    const data = await finnhubFetch(`/stock/profile2?symbol=${symbol}`, {
+        next: { revalidate: 86400 }
     });
-    if (!res.ok) throw new Error('Failed to fetch profile');
-    return res.json();
+
+    // Finnhub returns an empty object {} if no profile is found for the symbol
+    if (!data || Object.keys(data).length === 0) {
+        return null;
+    }
+
+    return data;
 }
 
 export async function getMarketNews(category: string = 'general'): Promise<any[]> {
-    const res = await fetch(`${BASE_URL}/news?category=${category}&token=${FINNHUB_API_KEY}`, {
-        next: { revalidate: 3600 } // Cache for 1 hour
+    return finnhubFetch(`/news?category=${category}`, {
+        next: { revalidate: 3600 }
     });
-    if (!res.ok) throw new Error('Failed to fetch news');
-    return res.json();
 }

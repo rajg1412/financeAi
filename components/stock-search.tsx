@@ -72,9 +72,9 @@ export function StockSearch() {
                             <div className="p-4 text-sm text-muted-foreground text-center">No results found.</div>
                         ) : (
                             <ul className="max-h-[300px] overflow-auto py-1">
-                                {results.map((item) => (
+                                {results.map((item, index) => (
                                     <li
-                                        key={item.displaySymbol}
+                                        key={`${item.displaySymbol}-${index}`}
                                         className="relative flex cursor-pointer select-none items-center rounded-lg px-3 py-2.5 text-sm outline-none hover:bg-accent/50 hover:text-accent-foreground transition-colors"
                                         onClick={() => handleSelect(item.symbol)}
                                     >
