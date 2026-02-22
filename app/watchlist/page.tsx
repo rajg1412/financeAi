@@ -51,7 +51,7 @@ export default async function WatchlistPage() {
                                             {stock.symbol}
                                         </Link>
                                     </CardTitle>
-                                    <CardDescription className="text-xs font-medium uppercase tracking-wider">{stock.profile.name}</CardDescription>
+                                    <CardDescription className="text-xs font-medium uppercase tracking-wider">{stock.profile?.name || 'Company Profile Unavailable'}</CardDescription>
                                 </div>
                                 <WatchlistButton symbol={stock.symbol} initialIsWatched={true} />
                             </CardHeader>
